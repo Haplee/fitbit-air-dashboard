@@ -1,0 +1,27 @@
+"use client";
+import { useQuery } from "@tanstack/react-query";
+import { ActivityChart, HeartChart, type DailyPoint } from "@/components/overview-charts";
+import { MetricCard } from "@/components/metric-card";
+import { Activity, Flame, Footprints, HeartPulse, MoonStar, RefreshCw, Sparkles, Wind } from "lucide-react";
+import Link from "next/link";
+import { formatNumber } from "@/lib/utils";
+import { toast } from "sonner";
+type Summary = { totals: Record<string, number | null>; daily: DailyPoint[]; records: number; googleConnected: boolean; lastSyncAt: string | null };
+async function loadSummary(): Promise<Summary> { const r = await fetch("/api/summary", { cache: "no-store" }); if (!r.ok) throw new Error("No se pudo cargar el resumen"); return r.json(); }
+export default function OverviewPage() {
+  const { data, isLoading, refetch } = useQuery({ queryKey: ["summary"], queryFn: loadSummary });
+  const totals = data?.totals ?? {};
+  async function syncNow() { const r = await fetch("/api/google/sync", { method: "POST" }); const j = await r.json(); if (!r.ok) { toast.error(j.error ?? "No se pudo sincronizar"); return; } toast.success(`Sincronización completada: ${j.inserted} registros nuevos`); await refetch(); }
+  return <>
+    <div className="welcome-row"><div><div className="eyebrow">TU PANEL DE BIENESTAR</div><h2>Tu salud, en perspectiva.</h2><p>Un espacio para entender tu actividad, descanso y evolución a lo largo del tiempo.</p></div><div className="flex gap-2"><button className="secondary-button flex items-center gap-2" onClick={syncNow} disabled={!data?.googleConnected}><RefreshCw size={13}/> Sincronizar</button><Link href="/import" className="primary-button">Importar histórico</Link></div></div>
+    <section className="metric-grid">
+      <MetricCard label="PASOS HOY" value={isLoading ? "…" : formatNumber(totals.stepsToday)} unit="pasos" detail="Actividad diaria" icon={Footprints} tone="rose"/>
+      <MetricCard label="PULSO MEDIO" value={isLoading ? "…" : formatNumber(totals.heartRateAverage)} unit="lpm" detail="Últimos 30 días" icon={HeartPulse} tone="violet"/>
+      <MetricCard label="SUEÑO MEDIO" value={isLoading ? "…" : (totals.sleepAverageMinutes == null ? "—" : `${(totals.sleepAverageMinutes / 60).toFixed(1).replace(".", ",")}`)} unit="horas" detail="Últimos 30 días" icon={MoonStar} tone="cyan"/>
+      <MetricCard label="HRV RECIENTE" value={isLoading ? "…" : formatNumber(totals.hrvLatest, 1)} unit="ms" detail="Última medición disponible" icon={Activity} tone="orange"/>
+    </section>
+    <section className="content-grid"><article className="panel"><div className="panel-header"><div><div className="panel-title">Movimiento diario</div><div className="panel-subtitle">Evolución de pasos · últimos 30 días</div></div><span className="panel-action">30 DÍAS</span></div><ActivityChart data={data?.daily ?? []}/></article><article className="panel"><div className="panel-header"><div><div className="panel-title">Indicadores recientes</div><div className="panel-subtitle">Últimos valores almacenados</div></div><Sparkles size={16} color="#d985a0"/></div><div className="mini-summary"><MiniRow icon={<HeartPulse size={15}/>} label="Pulso en reposo" value={totals.restingHeartRate == null ? "—" : formatNumber(totals.restingHeartRate)} unit="lpm"/><MiniRow icon={<Wind size={15}/>} label="Oxígeno en sangre" value={totals.spo2 == null ? "—" : formatNumber(totals.spo2,1)} unit="%"/><MiniRow icon={<Flame size={15}/>} label="Calorías" value={totals.caloriesToday == null ? "—" : formatNumber(totals.caloriesToday)} unit="kcal"/><MiniRow icon={<Activity size={15}/>} label="Minutos activos" value={totals.activeMinutesToday == null ? "—" : formatNumber(totals.activeMinutesToday)} unit="min"/></div></article></section>
+    <section className="bottom-grid"><article className="panel"><div className="panel-header"><div><div className="panel-title">Tendencia cardíaca</div><div className="panel-subtitle">Media diaria de frecuencia cardíaca</div></div><Link href="/heart" className="panel-action">VER DETALLE ↗</Link></div><HeartChart data={data?.daily ?? []}/></article><article className="panel insight-panel"><div className="insight-head">Estado de las conexiones <span>ORIGEN DE DATOS</span></div><div className="data-state"><div className="data-state-icon"><Activity size={17}/></div><div><strong>{data?.googleConnected ? "Google Health conectado" : "Google Health sin conectar"}</strong><p>{data?.googleConnected ? "La aplicación puede consultar las métricas que has autorizado." : "Puedes importar tu histórico de Google Takeout mientras configuras OAuth."}</p></div><Link className="state-action" href="/settings">Configurar ↗</Link></div><div className="data-state mt-2"><div className="data-state-icon"><Footprints size={17}/></div><div><strong>{formatNumber(data?.records ?? 0)} registros guardados</strong><p>{data?.lastSyncAt ? `Última sincronización: ${new Date(data.lastSyncAt).toLocaleString("es-ES")}` : "El histórico se conserva en tu base de datos privada."}</p></div><Link className="state-action" href="/import">Importar ↗</Link></div></article></section>
+  </>;
+}
+function MiniRow({ icon, label, value, unit }: { icon: React.ReactNode; label: string; value: string; unit: string }) { return <div className="mini-row"><div className="mini-row-label"><span className="mini-row-icon">{icon}</span>{label}</div><strong>{value}<small>{unit}</small></strong></div>; }

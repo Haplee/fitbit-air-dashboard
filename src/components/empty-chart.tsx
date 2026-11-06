@@ -1,0 +1,1 @@
+export function EmptyChart({ title = "Todavía no hay datos", description = "Importa tu histórico de Google Health para empezar a visualizar tu evolución." }: { title?: string; description?: string }) { return <div className="empty-chart"><div className="empty-chart-mark"><span/><span/><span/><span/><span/></div><strong>{title}</strong><p>{description}</p></div>; }

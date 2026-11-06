@@ -1,0 +1,8 @@
+"use client";
+import { useQuery } from "@tanstack/react-query";
+import { ActivityChart } from "@/components/overview-charts";
+import { MetricCard } from "@/components/metric-card";
+import { Footprints, Flame, Route, Timer } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
+async function load() { const r = await fetch("/api/summary", { cache: "no-store" }); if (!r.ok) throw new Error(); return r.json(); }
+export default function ActivityPage() { const { data } = useQuery({ queryKey: ["summary"], queryFn: load }); const t = data?.totals ?? {}; return <><div className="page-heading"><div className="eyebrow">MOVIMIENTO Y ENTRENAMIENTO</div><h2>Actividad física</h2><p>Pasos, distancia, calorías, minutos activos y sesiones deportivas que estén disponibles en Google Health o en tu histórico.</p></div><div className="metric-grid"><MetricCard label="PASOS HOY" value={formatNumber(t.stepsToday)} unit="pasos" detail="Día local" icon={Footprints} tone="rose"/><MetricCard label="DISTANCIA" value={t.distanceToday == null ? "—" : formatNumber(t.distanceToday/1000,2)} unit="km" detail="Hoy" icon={Route} tone="violet"/><MetricCard label="CALORÍAS" value={formatNumber(t.caloriesToday)} unit="kcal" detail="Hoy" icon={Flame} tone="orange"/><MetricCard label="MINUTOS ACTIVOS" value={formatNumber(t.activeMinutesToday)} unit="min" detail="Hoy" icon={Timer} tone="cyan"/></div><article className="panel"><div className="panel-header"><div><div className="panel-title">Pasos diarios</div><div className="panel-subtitle">Últimos 30 días</div></div></div><ActivityChart data={data?.daily ?? []}/></article></>; }

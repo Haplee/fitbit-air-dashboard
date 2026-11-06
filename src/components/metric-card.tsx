@@ -1,0 +1,4 @@
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+export function MetricCard({ label, value, unit, detail, icon: Icon, tone = "rose", trend }: { label: string; value: string; unit: string; detail: string; icon: React.ElementType; tone?: "rose" | "violet" | "orange" | "cyan"; trend?: "up" | "down" | "flat" }) {
+  return <article className="metric-card"><div className="metric-card-top"><span>{label}</span><div className={`metric-icon ${tone}`}><Icon size={18}/></div></div><div className="metric-value">{value}<small>{unit}</small></div><div className="metric-card-bottom"><span>{detail}</span>{trend && <span className={`trend ${trend}`}>{trend === "up" ? <ArrowUpRight size={13}/> : trend === "down" ? <ArrowDownRight size={13}/> : <Minus size={13}/>} Comparativa</span>}</div></article>;
+}

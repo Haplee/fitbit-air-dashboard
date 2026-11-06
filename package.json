@@ -1,0 +1,55 @@
+{
+  "name": "fitbit-air-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "auth:hash": "tsx scripts/hash-password.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@tanstack/react-query": "^5.90.5",
+    "@zip.js/zip.js": "^2.7.72",
+    "bcryptjs": "^3.0.2",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "^0.45.4",
+    "jose": "^6.1.0",
+    "lucide-react": "^0.468.0",
+    "next": "^16.4.5",
+    "papaparse": "^5.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^2.15.4",
+    "sonner": "^2.0.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.15.30",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.7",
+    "dotenv": "^16.6.1",
+    "drizzle-kit": "^0.18.1",
+    "eslint": "^9.30.1",
+    "eslint-config-next": "^15.5.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "allowScripts": {
+    "esbuild@0.15.18": true,
+    "esbuild@0.28.2": true
+  }
+}
