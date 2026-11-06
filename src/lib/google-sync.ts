@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, googleConnections, healthRecords } from "@/lib/db";
 import { GOOGLE_DATA_TYPES, getGoogleTokens, getValidGoogleAccessToken, normalizeGoogleDataPoint } from "@/lib/google-health";
+import type { MetricRecordInput } from "@/lib/metrics";
 
 /** Shared implementation for the owner-triggered sync and the Vercel Cron endpoint. */
 export async function syncGoogleHealthData() {
@@ -50,7 +51,7 @@ export async function syncGoogleHealthData() {
       scanned += points.length;
 
       for (let index = 0; index < mapped.length; index += 250) {
-        const batch = mapped.slice(index, index + 250).map((record) => {
+        const batch = mapped.slice(index, index + 250).map((record: MetricRecordInput) => {
           const dedupeKey = createHash("sha256")
             .update(`${record.metric}|${record.measuredAt}|${record.value}|${record.unit}`)
             .digest("hex");

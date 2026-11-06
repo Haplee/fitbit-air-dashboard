@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ZipReader, BlobReader, TextWriter } from "@zip.js/zip.js";
+import { ZipReader, BlobReader, TextWriter, FileEntry } from "@zip.js/zip.js";
 import Papa from "papaparse";
 import { CheckCircle2, FileArchive, FileJson, FileSpreadsheet, ShieldCheck, UploadCloud, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +9,11 @@ import { collectCandidateRows, normalizeRows } from "@/lib/import/normalize";
 
 type Progress = { percent: number; message: string; inserted: number; duplicates: number; files: number; records: number };
 const BATCH_SIZE = 250;
+
+function isFileEntry(entry: { directory: boolean }): entry is FileEntry {
+  return !entry.directory;
+}
+
 async function loadImportJobs() { const response = await fetch("/api/import/jobs", { cache: "no-store" }); if (!response.ok) throw new Error("No se pudo cargar el historial."); return response.json() as Promise<{ jobs: Array<{ id: string; fileName: string; status: string; totalRecords: number; insertedRecords: number; duplicateRecords: number; filesProcessed: number; startedAt: string; completedAt: string | null }> }>; }
 export default function ImportPage() {
   const { data: history, refetch: refreshHistory } = useQuery({ queryKey: ["import-jobs"], queryFn: loadImportJobs });
@@ -32,7 +37,7 @@ export default function ImportPage() {
       if (job.alreadyImported) { setResult("Este archivo ya se había importado anteriormente. No se han duplicado registros."); setWorking(false); setProgress(null); await refreshHistory(); return; }
       const reader = new ZipReader(new BlobReader(file));
       const entries = await reader.getEntries();
-      const relevant = entries.filter((entry) => !entry.directory && /\.(json|csv)$/i.test(entry.filename) && !/(manifest|readme|metadata)/i.test(entry.filename));
+      const relevant = entries.filter((entry): entry is FileEntry => isFileEntry(entry) && /\.(json|csv)$/i.test(entry.filename) && !/(manifest|readme|metadata)/i.test(entry.filename));
       if (!relevant.length) throw new Error("No se han encontrado archivos JSON o CSV reconocibles dentro del ZIP.");
       let processed = 0;
       for (let index = 0; index < relevant.length; index++) {
@@ -68,7 +73,7 @@ export default function ImportPage() {
       await refreshHistory();
     } catch (e) { const message = e instanceof Error ? e.message : "Error inesperado durante la importación."; setError(message); toast.error(message); }
     finally { setWorking(false); if (inputRef.current) inputRef.current.value = ""; }
-  }, []);
+  }, [refreshHistory]);
   return <><div className="page-heading"><div className="eyebrow">HISTÓRICO PERSONAL</div><h2>Centro de importación</h2><p>Incorpora copias exportadas desde Google Takeout. El ZIP se analiza dentro de tu navegador y se envían únicamente registros normalizados a tu base de datos.</p></div><div className="import-layout"><section className="panel"><div className="panel-header"><div><div className="panel-title">Importar Google Takeout</div><div className="panel-subtitle">Formatos admitidos: ZIP con archivos JSON y CSV</div></div><span className="tag">LOCAL EN NAVEGADOR</span></div><div className={`dropzone ${dragging ? "dragging" : ""}`} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(e) => { e.preventDefault(); setDragging(false); const file = e.dataTransfer.files?.[0]; if (file) void processFile(file); }}><div className="upload-icon"><UploadCloud size={23}/></div><h3>Arrastra aquí tu archivo ZIP</h3><p>Selecciona el archivo descargado desde Google Takeout. El límite de tamaño del importador es 250 MB y el contenido se procesa en tu navegador.</p><button className="primary-button" onClick={() => inputRef.current?.click()} disabled={working}>Seleccionar archivo</button><input ref={inputRef} type="file" accept=".zip,application/zip" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) void processFile(file); }}/></div>{progress && <div className="import-progress"><div className="progress-top"><span>{progress.message}</span><strong>{progress.percent}%</strong></div><div className="progress-track"><div className="progress-fill" style={{ width: `${progress.percent}%` }}/></div><div className="flex justify-between mt-3 text-[9px] text-[#888693]"><span>{progress.files} archivos · {progress.records.toLocaleString("es-ES")} registros leídos</span><span>{progress.inserted.toLocaleString("es-ES")} guardados</span></div></div>}{result && <div className="mx-[18px] mb-[18px] success-notice notice flex items-start gap-2"><CheckCircle2 size={15} className="shrink-0 mt-0.5"/>{result}</div>}{error && <div className="mx-[18px] mb-[18px] error-notice notice flex items-start gap-2"><XCircle size={15} className="shrink-0 mt-0.5"/>{error}</div>}</section><aside className="panel"><div className="panel-header"><div><div className="panel-title">Cómo funciona</div><div className="panel-subtitle">Importación segura y deduplicada</div></div><ShieldCheck size={17} color="#d985a0"/></div><div className="import-steps"><Step n="01" title="Exporta tus datos" text="En Google Takeout, selecciona Google Health y descarga el archivo ZIP."/><Step n="02" title="Procesamiento en navegador" text="El ZIP se abre localmente. No se almacena una copia completa del archivo en el servidor."/><Step n="03" title="Normalización" text="Las mediciones compatibles se transforman a un esquema común y se envían por lotes."/><Step n="04" title="Deduplicación" text="Cada medición recibe una clave estable para evitar duplicados entre cargas."/></div><div className="border-t border-[#292832] px-[18px] py-4"><div className="info-list"><Info icon={<FileArchive size={15}/>} text="Archivo ZIP descargado desde Google Takeout."/><Info icon={<FileJson size={15}/>} text="JSON para sesiones, mediciones y resúmenes."/><Info icon={<FileSpreadsheet size={15}/>} text="CSV cuando esté incluido en la exportación."/></div></div></aside></div><section className="panel mt-4"><div className="panel-header"><div><div className="panel-title">Historial de importaciones</div><div className="panel-subtitle">Últimos 20 archivos procesados</div></div><span className="tag">{history?.jobs?.length ?? 0} REGISTROS</span></div><div className="table-wrap"><table className="data-table"><thead><tr><th>ARCHIVO</th><th>ESTADO</th><th>REGISTROS</th><th>FECHA</th></tr></thead><tbody>{(history?.jobs ?? []).map((job) => <tr key={job.id}><td>{job.fileName}</td><td><span className="tag">{job.status === "completed" ? "COMPLETADA" : job.status.toUpperCase()}</span></td><td>{Number(job.insertedRecords).toLocaleString("es-ES")} nuevos · {Number(job.duplicateRecords).toLocaleString("es-ES")} duplicados</td><td>{new Date(job.startedAt).toLocaleString("es-ES")}</td></tr>)}{!history?.jobs?.length && <tr><td colSpan={4}>Todavía no hay importaciones.</td></tr>}</tbody></table></div></section><div className="notice mt-4">El formato de Takeout puede cambiar y no todos los ficheros se pueden identificar automáticamente. Los archivos no reconocidos se omiten; después de una primera exportación real podremos ajustar el mapeo a su estructura exacta.</div></>;
 }
 function Step({ n, title, text }: { n: string; title: string; text: string }) { return <div className="import-step"><div className="step-number">{n}</div><div><strong>{title}</strong><p>{text}</p></div></div>; }

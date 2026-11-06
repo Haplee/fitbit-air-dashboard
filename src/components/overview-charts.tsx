@@ -2,7 +2,32 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart, Bar, BarChart } from "recharts";
 import { EmptyChart } from "@/components/empty-chart";
 export type DailyPoint = { day: string; steps: number; heartRate: number | null; sleep: number | null };
-function ChartTooltip({ active, payload, label }: any) { if (!active || !payload?.length) return null; return <div className="chart-tooltip"><span>{label}</span>{payload.map((entry: any) => <div key={entry.dataKey}><i style={{ background: entry.color }}/>{entry.name}: <b>{new Intl.NumberFormat("es-ES").format(entry.value ?? 0)}</b></div>)}</div>; }
+
+interface TooltipPayload {
+  dataKey: string;
+  name: string;
+  value: number | null;
+  color: string;
+}
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <span>{label}</span>
+      {payload.map((entry) => (
+        <div key={entry.dataKey}>
+          <i style={{ background: entry.color }} />
+          {entry.name}: <b>{new Intl.NumberFormat("es-ES").format(entry.value ?? 0)}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
 export function ActivityChart({ data }: { data: DailyPoint[] }) { if (!data.length) return <EmptyChart/>; return <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{ top: 12, right: 12, left: -18, bottom: 0 }}><defs><linearGradient id="stepsFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ec7898" stopOpacity={0.25}/><stop offset="95%" stopColor="#ec7898" stopOpacity={0}/></linearGradient></defs><CartesianGrid stroke="#ffffff0c" vertical={false}/><XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: "#777987", fontSize: 11 }}/><YAxis tickLine={false} axisLine={false} tick={{ fill: "#777987", fontSize: 11 }}/><Tooltip content={<ChartTooltip/>}/><Area type="monotone" dataKey="steps" name="Pasos" stroke="#ec7898" strokeWidth={2.5} fill="url(#stepsFill)"/></AreaChart></ResponsiveContainer></div>; }
 export function HeartChart({ data }: { data: DailyPoint[] }) { const valid = data.filter((d) => d.heartRate !== null); if (!valid.length) return <EmptyChart title="Sin registros de pulso"/>; return <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><LineChart data={valid} margin={{ top: 12, right: 12, left: -18, bottom: 0 }}><CartesianGrid stroke="#ffffff0c" vertical={false}/><XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: "#777987", fontSize: 11 }}/><YAxis domain={[(min: number) => Math.max(35, min - 10), (max: number) => max + 10]} tickLine={false} axisLine={false} tick={{ fill: "#777987", fontSize: 11 }}/><Tooltip content={<ChartTooltip/>}/><Line type="monotone" dataKey="heartRate" name="Pulso medio" stroke="#f19ab5" strokeWidth={2.5} dot={{ r: 3, fill: "#f19ab5", strokeWidth: 0 }} activeDot={{ r: 5 }}/></LineChart></ResponsiveContainer></div>; }
 export function SleepChart({ data }: { data: DailyPoint[] }) { const valid = data.filter((d) => d.sleep !== null); if (!valid.length) return <EmptyChart title="Sin sesiones de sueño"/>; return <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><BarChart data={valid} margin={{ top: 12, right: 12, left: -18, bottom: 0 }}><CartesianGrid stroke="#ffffff0c" vertical={false}/><XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: "#777987", fontSize: 11 }}/><YAxis tickLine={false} axisLine={false} tick={{ fill: "#777987", fontSize: 11 }}/><Tooltip content={<ChartTooltip/>}/><Bar dataKey="sleep" name="Sueño (min)" fill="#a99af4" radius={[5,5,0,0]}/></BarChart></ResponsiveContainer></div>; }

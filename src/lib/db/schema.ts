@@ -1,6 +1,21 @@
-import { pgTable, uuid, varchar, text, numeric, timestamp, jsonb, integer, boolean, uniqueIndex, index } from "drizzle-orm/pg-core";
+import {
+  pgSchema,
+  uuid,
+  varchar,
+  text,
+  numeric,
+  timestamp,
+  jsonb,
+  integer,
+  uniqueIndex,
+  index,
+} from "drizzle-orm/pg-core";
 
-export const healthRecords = pgTable("health_records", {
+// Keep health data in a non-exposed schema. The application accesses it only
+// through its server-side PostgreSQL connection, not through the public Data API.
+const fitbit = pgSchema("fitbit");
+
+export const healthRecords = fitbit.table("health_records", {
   id: uuid("id").defaultRandom().primaryKey(),
   metric: varchar("metric", { length: 64 }).notNull(),
   value: numeric("value", { precision: 16, scale: 4 }).notNull(),
@@ -19,7 +34,7 @@ export const healthRecords = pgTable("health_records", {
   measuredAtIdx: index("health_records_measured_at_idx").on(t.measuredAt),
 }));
 
-export const importJobs = pgTable("import_jobs", {
+export const importJobs = fitbit.table("import_jobs", {
   id: uuid("id").defaultRandom().primaryKey(),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   sha256: varchar("sha256", { length: 64 }).notNull(),
@@ -33,7 +48,7 @@ export const importJobs = pgTable("import_jobs", {
   completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
 }, (t) => ({ shaUnique: uniqueIndex("import_jobs_sha_uq").on(t.sha256) }));
 
-export const googleConnections = pgTable("google_connections", {
+export const googleConnections = fitbit.table("google_connections", {
   id: uuid("id").defaultRandom().primaryKey(),
   ownerKey: varchar("owner_key", { length: 64 }).notNull().default("owner"),
   encryptedTokens: text("encrypted_tokens").notNull(),
@@ -44,7 +59,7 @@ export const googleConnections = pgTable("google_connections", {
   lastSyncStatus: varchar("last_sync_status", { length: 32 }).notNull().default("never"),
 }, (t) => ({ ownerUnique: uniqueIndex("google_connections_owner_uq").on(t.ownerKey) }));
 
-export const appEvents = pgTable("app_events", {
+export const appEvents = fitbit.table("app_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   eventType: varchar("event_type", { length: 64 }).notNull(),
   message: text("message").notNull(),

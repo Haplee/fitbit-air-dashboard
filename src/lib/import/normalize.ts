@@ -24,7 +24,6 @@ const aliases: Record<string, { metric: MetricKey; unit: string; valueKeys: stri
 };
 
 const timeKeys = ["datetime", "date", "timestamp", "starttime", "start_time", "measuredat", "time", "start"];
-const ignoredKeys = new Set(["id", "name", "type", "source", "device", "unit", "timezone", "endtime", "end_time"]);
 
 function keyNorm(value: string) { return value.toLowerCase().replace(/[^a-z0-9]/g, ""); }
 function findDeepValue(obj: unknown, candidates: string[], depth = 0): unknown {
